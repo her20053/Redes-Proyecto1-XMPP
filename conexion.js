@@ -32,9 +32,13 @@ class ClienteXMPP {
         });
 
         this.xmpp.on("stanza", (stanza) => {
+
+            //console.log("Estrofa recibida: ", stanza.toString());
+
             if (stanza.is("presence") && stanza.attrs.type !== 'unavailable') {
                 this.usuariosEnLinea.push(stanza.attrs.from.split("@")[0]);
             }
+
             if (stanza.is("message")) {
                 const from = stanza.attrs.from;
                 const body = stanza.getChild("body");
@@ -46,7 +50,7 @@ class ClienteXMPP {
                     this.mensajes[from] = [];
                 }
                 this.mensajes[from].push(mensaje);
-                console.log("Mensaje recibido de " + from + ": " + mensaje);
+                console.log("Mensaje almacenado de " + from + ": " + mensaje);
             }
         });
 
@@ -83,6 +87,20 @@ class ClienteXMPP {
         });
     }
 
+    async mostrarMensajes() {
+        if (!this.xmpp) {
+            throw new Error("El cliente XMPP no está conectado. Primero llama al método 'conectar()'.");
+        }
+
+        console.log("Mensajes:");
+        for (const usuario in this.mensajes) {
+            console.log(`De ${usuario}:`);
+            for (const mensaje of this.mensajes[usuario]) {
+                console.log(`  - ${mensaje}`);
+            }
+        }
+    }
+
     // Add a method to disconnect from XMPP
     async desconectar() {
         if (this.xmpp) {
@@ -108,24 +126,32 @@ function leerEntrada(prompt) {
     });
 }
 
+// Create the client outside the menu function so it's always connected
+const cliente = new ClienteXMPP("her20053", "Formula1!");
+cliente.conectar().catch(console.error);
+
 async function menu() {
     console.log("[ * ] Bienvenido al cliente XMPP!");
     console.log("[ 1 ] Enviar mensaje");
-    console.log("[ 2 ] Salir.");
+    console.log("[ 2 ] Mostrar mensajes");
+    console.log("[ 3 ] Mostrar usuarios en línea"); // Nueva opción
+    console.log("[ 4 ] Salir.");
 
-    const opcion = await leerEntrada("Seleccione una opción (1 o 2): ");
+    const opcion = await leerEntrada("Opcion: ");
 
     if (opcion === "1") {
-        const cliente = new ClienteXMPP("her20053", "Formula1!");
-        await cliente.conectar();
-
         const destinatario = await leerEntrada("Ingrese el nombre de usuario del destinatario: ");
         const mensaje = await leerEntrada("Ingrese el mensaje: ");
 
         await cliente.enviarMensaje(destinatario, mensaje);
         console.log("Mensaje enviado correctamente.");
-        await cliente.desconectar();
     } else if (opcion === "2") {
+        await cliente.mostrarMensajes();
+    } else if (opcion === "3") { // Opción para mostrar usuarios en línea
+        const usuariosEnLinea = await cliente.obtenerUsuariosEnLinea();
+        console.log("Usuarios en línea: ", usuariosEnLinea.join(', '));
+    } else if (opcion === "4") { // Cambiado de 3 a 4
+        await cliente.desconectar();
         process.exit(0); // Exit the application with success code
     } else {
         console.log("Opción inválida. Intente nuevamente.");
