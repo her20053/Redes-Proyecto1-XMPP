@@ -34,6 +34,7 @@ class SimpleXMPPClient {
         });
 
         this.xmpp.on('online', address => {
+            this.listnerNotifications();
             console.log('\n + Connected successfully as:', address.toString());
         });
 
@@ -86,6 +87,68 @@ class SimpleXMPPClient {
     showUserOptions() {
         console.log('\nWhat would you like to do?');
         // ... Rest of the options ...
+    }
+
+    async listnerNotifications() {
+
+        if (!this.xmpp) {
+            throw new Error("There is no active connection.");
+        }
+
+        const maxLength = 60;
+
+        this.xmpp.on("stanza", (stanza) => {
+
+            if (stanza.is("message") && this.receiveNotifications) {
+                const type = stanza.attrs.type;
+                const from = stanza.attrs.from;
+                let body = stanza.getChildText("body");
+
+                const message = body.text();
+
+                console.log("Message: " + message);
+
+                if (type === "chat" && body) {
+                    if (body.length > maxLength) {
+                        body = body.substring(0, maxLength) + "...";
+                    }
+
+                    console.log(`Nuevo mensaje de ${from.split("@")[0]}: ${body}`);
+                }
+
+                else if (type === "groupchat" && body) {
+                    if (body.length > maxLength) {
+                        body = body.substring(0, maxLength) + "...";
+                    }
+
+                    console.log(`Nuevo mensaje de ${from.split("@")[0]}: ${body}`);
+                }
+
+                else if (message.includes("File sent:")) {
+
+                    console.log("File sent: " + message.split(" ")[1] + message.split(" ")[2] + message.split(" ")[3]);
+
+                    const fileName = message.split(" ")[1];
+                    const fileData = message.split(" ")[2];
+                    const fileExtension = message.split(" ")[3];
+
+                    const file = Buffer.from(fileData, 'base64');
+
+                    fs.writeFile(fileName + fileExtension, file, (err) => {
+                        if (err) throw err;
+                        console.log('The file has been saved!');
+                    });
+
+                }
+
+            } else if (stanza.is("presence") && stanza.attrs.type === "subscribe") {
+                console.log(`New friend request from : ${stanza.attrs.from.split("@")[0]}`);
+                this.notifications.add(`New friend request sent from: ${stanza.attrs.from.split("@")[0]}`);
+            }
+
+
+        });
+
     }
 }
 
@@ -143,7 +206,16 @@ const mainMenu = () => {
                 mainMenu();
                 break;
         }
+
+
+
     });
+
+
+
 };
+
+
+
 
 mainMenu();
