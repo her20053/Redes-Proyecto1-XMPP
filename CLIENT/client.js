@@ -34,12 +34,13 @@ class SimpleXMPPClient {
         });
 
         this.xmpp.on('online', address => {
-            this.listnerNotifications();
+
             console.log('\n + Connected successfully as:', address.toString());
         });
 
         try {
             await this.xmpp.start();
+            this.listnerNotifications();
             console.log('\n + Connection started...');
         } catch (err) {
             console.error('\n - Error establishing connection:', err);
@@ -89,66 +90,48 @@ class SimpleXMPPClient {
         // ... Rest of the options ...
     }
 
-    async listnerNotifications() {
-
+    listnerNotifications() {
         if (!this.xmpp) {
-            throw new Error("There is no active connection.");
+            throw new Error("E.");
         }
 
-        const maxLength = 60;
+        //definimos el largo maximo para los mensajes
+        const maxLength = 40;
 
+        // escuchando las stanzas entrantes
         this.xmpp.on("stanza", (stanza) => {
-
-            if (stanza.is("message") && this.receiveNotifications) {
+            // stanzas de mensaje, solo la de invitacion se agrega a la lista
+            if (stanza.is("message")) {
+                // console.log(stanza.toString());
                 const type = stanza.attrs.type;
                 const from = stanza.attrs.from;
                 let body = stanza.getChildText("body");
 
-                const message = body.text();
-
-                console.log("Message: " + message);
-
                 if (type === "chat" && body) {
+                    //vemos si el mensaje es muy largo
                     if (body.length > maxLength) {
                         body = body.substring(0, maxLength) + "...";
                     }
 
                     console.log(`Nuevo mensaje de ${from.split("@")[0]}: ${body}`);
-                }
-
-                else if (type === "groupchat" && body) {
+                } else if (type === "groupchat" && body) {
+                    const jid = from.split("/")[1];
+                    const groupname = from.split("@")[0];
+                    //vemos si el mensaje es muy largo
                     if (body.length > maxLength) {
                         body = body.substring(0, maxLength) + "...";
                     }
-
-                    console.log(`Nuevo mensaje de ${from.split("@")[0]}: ${body}`);
+                    console.log(`Nuevo mensaje de ${jid} en grupo ${groupname}: ${body}`);
+                } else if (from.includes("@conference")) {
+                    console.log(`Nueva invitación de grupo de: ${from.split("@")[0]}`);
+                    this.notifications.add(`Nueva invitación de grupo de: ${from.split("@")[0]}`);
                 }
-
-                else if (message.includes("File sent:")) {
-
-                    console.log("File sent: " + message.split(" ")[1] + message.split(" ")[2] + message.split(" ")[3]);
-
-                    const fileName = message.split(" ")[1];
-                    const fileData = message.split(" ")[2];
-                    const fileExtension = message.split(" ")[3];
-
-                    const file = Buffer.from(fileData, 'base64');
-
-                    fs.writeFile(fileName + fileExtension, file, (err) => {
-                        if (err) throw err;
-                        console.log('The file has been saved!');
-                    });
-
-                }
-
             } else if (stanza.is("presence") && stanza.attrs.type === "subscribe") {
-                console.log(`New friend request from : ${stanza.attrs.from.split("@")[0]}`);
-                this.notifications.add(`New friend request sent from: ${stanza.attrs.from.split("@")[0]}`);
+                // solicitudes de amistad
+                console.log(`Nueva solicitud de amistad de: ${stanza.attrs.from.split("@")[0]}`);
+                this.notifications.add(`Nueva solicitud de amistad de: ${stanza.attrs.from.split("@")[0]}`);
             }
-
-
         });
-
     }
 }
 

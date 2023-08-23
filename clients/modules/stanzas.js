@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 function pad(str, width, padChar = " ") {
     return str.padEnd(width, padChar).slice(0, width);
 }
@@ -31,6 +34,23 @@ async function esuchar_mensajes_privados(client, JID) {
             const body = stanza.getChild('body');
             const message = body.text();
             console.log(` + ${JID}: ${message}`);
+
+            if (message.startsWith('File sent: ')) {
+                // Decodificar el archivo recibido
+                const parts = message.substring(11).split(':');
+                const fileName = parts[0];
+                const fileBase64 = parts[1];
+                const file = Buffer.from(fileBase64, 'base64');
+
+                // guardar el archivo en el directorio ./received_files
+                const saveDir = './images2';
+                fs.writeFileSync(path.join(saveDir, fileName), file);
+                console.log(`${JID}: Envio un archivo: ${fileName}`)
+                console.log(`Archivo guardado en: ${saveDir}/${fileName}`);
+
+            } else {
+                console.log(`${JID}: ${message}`);
+            }
 
         }
 

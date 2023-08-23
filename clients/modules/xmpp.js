@@ -215,7 +215,7 @@ class Client {
         });
         try {
             await this.xmpp.start();
-            this.listenForStanzas();
+            this.listnerNotifications();
         } catch (err) {
             if (err.condition === 'not-authorized') {
                 throw new Error('\nThe username or password is incorrect.');
